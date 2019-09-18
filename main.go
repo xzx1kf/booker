@@ -1,11 +1,13 @@
 package main
 
 import (
-	"fmt"
+    "flag"
+    "fmt"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+    "os"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -97,6 +99,17 @@ func bookCourt(court, days, hour, min, timeslot string) {
 		log.Fatal(err)
 	}
 
+    //fmt.Println(rsp.Request.URL)
+    u, err := url.Parse(rsp.Request.URL.String())
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // if the response url contains an error parameter then the booking
+    // must of failed.
+    // TODO handle the error.
+    m, _ := url.ParseQuery(u.RawQuery)
+    fmt.Println(m.Get("error"))
 }
 
 func listAvailableCourts() {
@@ -170,5 +183,19 @@ func parseCourtBookingPage(doc *goquery.Document) (token string, time string) {
 }
 
 func main() {
-	listAvailableCourts()
+    courtPtr := flag.String("c", "", "Which court to book.")
+    daysPtr := flag.String("d", "", "Which day to book on d=0 being today.")
+    hourPtr := flag.String("h", "", "What time, the hour portion in 24hr format 0-23.")
+    minPtr := flag.String("m", "", "What time, the minute portion from 0-59.")
+    tsPtr := flag.String("t", "", "What timeslot is the court.")
+    flag.Parse()
+
+    if *courtPtr == "" || *hourPtr == "" || *minPtr == "" || *daysPtr == "" || *tsPtr == "" {
+        flag.PrintDefaults()
+        os.Exit(1)
+    }
+
+    fmt.Printf("court: %s, time: %s:%s, days: %s, timeslot: %s\n", *courtPtr, *hourPtr, *minPtr, *daysPtr, *tsPtr)
+
+    bookCourt(*courtPtr, *daysPtr, *hourPtr, *minPtr, *tsPtr)
 }
