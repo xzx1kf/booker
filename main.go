@@ -125,7 +125,7 @@ func listAvailableCourts() {
 
 			bookings = append(bookings, bs)
 
-            // book court on saturdays
+			// book court on saturdays
 			if bs.Court == "1" && bs.Days == "21" && bs.Hour == "9" && bs.Min == "10" && bs.Timeslot == "1" {
 				bookCourt(bs.Court, bs.Days, bs.Hour, bs.Min, bs.Timeslot)
 				fmt.Println("booked")
