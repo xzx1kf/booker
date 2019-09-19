@@ -1,54 +1,24 @@
 package main
 
 import (
-    "errors"
-    "flag"
-    "fmt"
-	"log"
+	"errors"
+	"flag"
+	"fmt"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-    "os"
+	"os"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/publicsuffix"
 )
 
-/*
-type Error struct {
-    message string
-    Err     error
-}
-
-func (e *Error) Unwrap() error { return e.Err }
-func (e *Error) Error() string { return e.message + " " + e.Err.Error() }
-*/
-
 const (
 	tynemouthSquashUrl = "http://tynemouth-squash.herokuapp.com/bookings"
 )
 
-type Booking struct {
-	Court       string `json:"court"`
-	Days        string `json:"days"`
-	Hour        string `json:"hour"`
-	Min         string `json:"min"`
-	Timeslot    string `json:"hour"`
-	PlayerA     string `json:"playerA"`
-	PlayerB     string `json:"playerB"`
-	BookingLink string `json:"bookingLink"`
-	Booked      bool   `json:"booked"`
-}
-
-type Bookings []Booking
-
 func bookCourt(court, days, hour, min, timeslot string) (message string, err error) {
-	// Book a court given the
-	//  - Court Number
-	//  - Time
-	//  - Date
-	//  - etc...
 
 	// create a cookiejar - this is required because the website uses cookies
 	// and without it the booking of a court fails
@@ -110,18 +80,18 @@ func bookCourt(court, days, hour, min, timeslot string) (message string, err err
 		return "Failed to book court.", err
 	}
 
-    u, err := url.Parse(rsp.Request.URL.String())
-    if err != nil {
+	u, err := url.Parse(rsp.Request.URL.String())
+	if err != nil {
 		return "Failed to book court.", err
-    }
+	}
 
-    // if the response url contains an error parameter then the booking
-    // must of failed.
-    m, _ := url.ParseQuery(u.RawQuery)
-    if m.Get("error") != "" {
+	// if the response url contains an error parameter then the booking
+	// must of failed.
+	m, _ := url.ParseQuery(u.RawQuery)
+	if m.Get("error") != "" {
 		return "Failed to book court. The court already has a booking at this time", errors.New("Court already booked")
-    }
-    return "Court booked.", nil
+	}
+	return "Court booked.", nil
 }
 
 func parseCourtBookingPage(doc *goquery.Document) (token string, time string) {
@@ -139,20 +109,20 @@ func parseCourtBookingPage(doc *goquery.Document) (token string, time string) {
 }
 
 func main() {
-    courtPtr := flag.String("c", "", "Which court to book.")
-    daysPtr := flag.String("d", "", "Which day to book on d=0 being today.")
-    hourPtr := flag.String("h", "", "What time, the hour portion in 24hr format 0-23.")
-    minPtr := flag.String("m", "", "What time, the minute portion from 0-59.")
-    tsPtr := flag.String("t", "", "What timeslot is the court.")
-    flag.Parse()
+	courtPtr := flag.String("c", "", "Which court to book.")
+	daysPtr := flag.String("d", "", "Which day to book on d=0 being today.")
+	hourPtr := flag.String("h", "", "What time, the hour portion in 24hr format 0-23.")
+	minPtr := flag.String("m", "", "What time, the minute portion from 0-59.")
+	tsPtr := flag.String("t", "", "What timeslot is the court.")
+	flag.Parse()
 
-    if *courtPtr == "" || *hourPtr == "" || *minPtr == "" || *daysPtr == "" || *tsPtr == "" {
-        flag.PrintDefaults()
-        os.Exit(1)
-    }
+	if *courtPtr == "" || *hourPtr == "" || *minPtr == "" || *daysPtr == "" || *tsPtr == "" {
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
 
-    fmt.Printf("court: %s, time: %s:%s, days: %s, timeslot: %s\n", *courtPtr, *hourPtr, *minPtr, *daysPtr, *tsPtr)
+	fmt.Printf("court: %s, time: %s:%s, days: %s, timeslot: %s\n", *courtPtr, *hourPtr, *minPtr, *daysPtr, *tsPtr)
 
-    message, _ := bookCourt(*courtPtr, *daysPtr, *hourPtr, *minPtr, *tsPtr)
-    fmt.Println(message)
+	message, _ := bookCourt(*courtPtr, *daysPtr, *hourPtr, *minPtr, *tsPtr)
+	fmt.Println(message)
 }
