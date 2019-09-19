@@ -2,29 +2,51 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
+    "encoding/json"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/publicsuffix"
+
+    "github.com/aws/aws-lambda-go/lambda"
+    "github.com/aws/aws-lambda-go/events"
 )
 
 const (
 	tynemouthSquashUrl = "http://tynemouth-squash.herokuapp.com/bookings"
 )
 
-func bookCourt(court, days, hour, min, timeslot string) (message string, err error) {
+type Court struct {
+    Court       string `json:"court"`
+    Days        string `json:"days"`
+    Hour        string `json:"hour"`
+    Min         string `json:"min"`
+    Timeslot    string `json:"timeslot"`
+}
+
+type BookingStatus struct {
+    Message     string `json:"message"`
+}
+
+func HandleRequest(sqsEvent events.SQSEvent) (BookingStatus, error) {
+    if len(sqsEvent.Records) == 0 {
+        return BookingStatus{Message: fmt.Sprintf("Failed to book court.")}, errors.New("No SQS message passed to function")
+    }
+
+    msg := sqsEvent.Records[0]
+    event := Court{}
+    json.Unmarshal([]byte(msg.Body), &event)
+
 
 	// create a cookiejar - this is required because the website uses cookies
 	// and without it the booking of a court fails
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
-		return "Failed to book court.", err
+        return BookingStatus{Message: fmt.Sprintf("Failed to book court %s at %s:%s.", event.Court, event.Hour, event.Min)}, err
 	}
 
 	client := &http.Client{
@@ -33,20 +55,20 @@ func bookCourt(court, days, hour, min, timeslot string) (message string, err err
 
 	// Get the court booking page - this creates the cookie
 	r, err := http.NewRequest("GET", tynemouthSquashUrl+"/new?"+
-		"court="+court+
-		"&days="+days+
-		"&hour="+hour+
-		"&min="+min+
-		"&timeSlot="+timeslot,
+		"court=" + event.Court +
+		"&days=" + event.Days +
+		"&hour=" + event.Hour +
+		"&min=" + event.Min+
+		"&timeSlot=" + event.Timeslot,
 		nil)
 	if err != nil {
-		return "Failed to book court.", err
+        return BookingStatus{Message: fmt.Sprintf("Failed to book court %s at %s:%s.", event.Court, event.Hour, event.Min)}, err
 	}
 
 	// Make the request
 	rsp, err := client.Do(r)
 	if err != nil {
-		return "Failed to book court.", err
+        return BookingStatus{Message: fmt.Sprintf("Failed to book court %s at %s:%s.", event.Court, event.Hour, event.Min)}, err
 	}
 	defer rsp.Body.Close()
 
@@ -61,37 +83,37 @@ func bookCourt(court, days, hour, min, timeslot string) (message string, err err
 	v.Set("booking[vs_player_name]", "")
 	v.Set("booking[booking_number]", "1")
 	v.Set("booking[start_time]", time)
-	v.Set("booking[time_slot_id]", timeslot)
+	v.Set("booking[time_slot_id]", event.Timeslot)
 	v.Set("booking[court_time]", "40")
-	v.Set("booking[court_id]", court)
-	v.Set("booking[days]", days)
+	v.Set("booking[court_id]", event.Court)
+	v.Set("booking[days]", event.Days)
 	v.Set("commit", "Book Court")
 
 	// Create the POST request.
 	r, err = http.NewRequest("POST", tynemouthSquashUrl, strings.NewReader(v.Encode()))
 	if err != nil {
-		return "Failed to book court.", err
+        return BookingStatus{Message: fmt.Sprintf("Failed to book court %s at %s:%s.", event.Court, event.Hour, event.Min)}, err
 	}
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 
 	// Perform the POST request
 	rsp, err = client.Do(r)
 	if err != nil {
-		return "Failed to book court.", err
+        return BookingStatus{Message: fmt.Sprintf("Failed to book court %s at %s:%s.", event.Court, event.Hour, event.Min)}, err
 	}
 
 	u, err := url.Parse(rsp.Request.URL.String())
 	if err != nil {
-		return "Failed to book court.", err
+        return BookingStatus{Message: fmt.Sprintf("Failed to book court %s at %s:%s.", event.Court, event.Hour, event.Min)}, err
 	}
 
 	// if the response url contains an error parameter then the booking
 	// must of failed.
 	m, _ := url.ParseQuery(u.RawQuery)
 	if m.Get("error") != "" {
-		return "Failed to book court. The court already has a booking at this time", errors.New("Court already booked")
+        return BookingStatus{Message: fmt.Sprintf("Failed to book court. The court is already booked.")}, errors.New("Court already booked.")
 	}
-	return "Court booked.", nil
+    return BookingStatus{Message: fmt.Sprintf("Court booked.")}, nil
 }
 
 func parseCourtBookingPage(doc *goquery.Document) (token string, time string) {
@@ -109,20 +131,5 @@ func parseCourtBookingPage(doc *goquery.Document) (token string, time string) {
 }
 
 func main() {
-	courtPtr := flag.String("c", "", "Which court to book.")
-	daysPtr := flag.String("d", "", "Which day to book on d=0 being today.")
-	hourPtr := flag.String("h", "", "What time, the hour portion in 24hr format 0-23.")
-	minPtr := flag.String("m", "", "What time, the minute portion from 0-59.")
-	tsPtr := flag.String("t", "", "What timeslot is the court.")
-	flag.Parse()
-
-	if *courtPtr == "" || *hourPtr == "" || *minPtr == "" || *daysPtr == "" || *tsPtr == "" {
-		flag.PrintDefaults()
-		os.Exit(1)
-	}
-
-	fmt.Printf("court: %s, time: %s:%s, days: %s, timeslot: %s\n", *courtPtr, *hourPtr, *minPtr, *daysPtr, *tsPtr)
-
-	message, _ := bookCourt(*courtPtr, *daysPtr, *hourPtr, *minPtr, *tsPtr)
-	fmt.Println(message)
+	lambda.Start(HandleRequest)
 }
