@@ -109,7 +109,11 @@ func bookCourt(court, days, hour, min, timeslot string) {
     // must of failed.
     // TODO handle the error.
     m, _ := url.ParseQuery(u.RawQuery)
-    fmt.Println(m.Get("error"))
+    if m.Get("error") != "" {
+        fmt.Println("Court already booked")
+        return
+    }
+    fmt.Println("Court booked")
 }
 
 func listAvailableCourts() {
