@@ -1,6 +1,7 @@
 package main
 
 import (
+    "errors"
     "flag"
     "fmt"
 	"log"
@@ -13,6 +14,16 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/publicsuffix"
 )
+
+/*
+type Error struct {
+    message string
+    Err     error
+}
+
+func (e *Error) Unwrap() error { return e.Err }
+func (e *Error) Error() string { return e.message + " " + e.Err.Error() }
+*/
 
 const (
 	tynemouthSquashUrl = "http://tynemouth-squash.herokuapp.com/bookings"
@@ -32,7 +43,7 @@ type Booking struct {
 
 type Bookings []Booking
 
-func bookCourt(court, days, hour, min, timeslot string) {
+func bookCourt(court, days, hour, min, timeslot string) (message string, err error) {
 	// Book a court given the
 	//  - Court Number
 	//  - Time
@@ -43,7 +54,7 @@ func bookCourt(court, days, hour, min, timeslot string) {
 	// and without it the booking of a court fails
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
-		log.Fatal(err)
+		return "Failed to book court.", err
 	}
 
 	client := &http.Client{
@@ -59,13 +70,13 @@ func bookCourt(court, days, hour, min, timeslot string) {
 		"&timeSlot="+timeslot,
 		nil)
 	if err != nil {
-		log.Fatal(err)
+		return "Failed to book court.", err
 	}
 
 	// Make the request
 	rsp, err := client.Do(r)
 	if err != nil {
-		log.Fatal(err)
+		return "Failed to book court.", err
 	}
 	defer rsp.Body.Close()
 
@@ -89,20 +100,20 @@ func bookCourt(court, days, hour, min, timeslot string) {
 	// Create the POST request.
 	r, err = http.NewRequest("POST", tynemouthSquashUrl, strings.NewReader(v.Encode()))
 	if err != nil {
-		log.Fatal(err)
+		return "Failed to book court.", err
 	}
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 
 	// Perform the POST request
 	rsp, err = client.Do(r)
 	if err != nil {
-		log.Fatal(err)
+		return "Failed to book court.", err
 	}
 
     //fmt.Println(rsp.Request.URL)
     u, err := url.Parse(rsp.Request.URL.String())
     if err != nil {
-        log.Fatal(err)
+		return "Failed to book court.", err
     }
 
     // if the response url contains an error parameter then the booking
@@ -110,10 +121,9 @@ func bookCourt(court, days, hour, min, timeslot string) {
     // TODO handle the error.
     m, _ := url.ParseQuery(u.RawQuery)
     if m.Get("error") != "" {
-        fmt.Println("Court already booked")
-        return
+		return "Failed to book court. The court already has a booking at this time", errors.New("Court already booked")
     }
-    fmt.Println("Court booked")
+    return "Court booked.", nil
 }
 
 func listAvailableCourts() {
@@ -201,5 +211,6 @@ func main() {
 
     fmt.Printf("court: %s, time: %s:%s, days: %s, timeslot: %s\n", *courtPtr, *hourPtr, *minPtr, *daysPtr, *tsPtr)
 
-    bookCourt(*courtPtr, *daysPtr, *hourPtr, *minPtr, *tsPtr)
+    message, _ := bookCourt(*courtPtr, *daysPtr, *hourPtr, *minPtr, *tsPtr)
+    fmt.Println(message)
 }
