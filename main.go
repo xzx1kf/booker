@@ -110,7 +110,6 @@ func bookCourt(court, days, hour, min, timeslot string) (message string, err err
 		return "Failed to book court.", err
 	}
 
-    //fmt.Println(rsp.Request.URL)
     u, err := url.Parse(rsp.Request.URL.String())
     if err != nil {
 		return "Failed to book court.", err
@@ -118,68 +117,11 @@ func bookCourt(court, days, hour, min, timeslot string) (message string, err err
 
     // if the response url contains an error parameter then the booking
     // must of failed.
-    // TODO handle the error.
     m, _ := url.ParseQuery(u.RawQuery)
     if m.Get("error") != "" {
 		return "Failed to book court. The court already has a booking at this time", errors.New("Court already booked")
     }
     return "Court booked.", nil
-}
-
-func listAvailableCourts() {
-	// Rename to List Bookings
-	bookings := Bookings{}
-
-	res, err := http.Get("http://tynemouth-squash.herokuapp.com/bookings?day=21")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		log.Fatalf("status code error: %d %s", res.StatusCode, res.Status)
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("Available Courts")
-	doc.Find(".booking div.book a.booking_link").Each(func(i int, s *goquery.Selection) {
-		bl, exists := s.Attr("href")
-		if exists {
-			bs := parseBookingUrl(bl)
-
-			bookings = append(bookings, bs)
-
-			// book court on saturdays
-			if bs.Court == "1" && bs.Days == "21" && bs.Hour == "9" && bs.Min == "10" && bs.Timeslot == "1" {
-				bookCourt(bs.Court, bs.Days, bs.Hour, bs.Min, bs.Timeslot)
-				fmt.Println("booked")
-			}
-		}
-	})
-}
-
-func parseBookingUrl(link string) Booking {
-	s := link[14:]
-	s = strings.Replace(s, "&amp", "", -1)
-	m, err := url.ParseQuery(s)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	bs := Booking{
-		Court:       m["court"][0],
-		Days:        m["days"][0],
-		Hour:        m["hour"][0],
-		Min:         m["min"][0],
-		Timeslot:    m["timeSlot"][0],
-		Booked:      false,
-		BookingLink: "http://tynemouth-squash.herokuapp.com" + link,
-	}
-
-	return bs
 }
 
 func parseCourtBookingPage(doc *goquery.Document) (token string, time string) {
