@@ -13,7 +13,9 @@ import (
 	"golang.org/x/net/publicsuffix"
 
     "github.com/aws/aws-lambda-go/lambda"
-    "github.com/aws/aws-lambda-go/events"
+    "github.com/aws/aws-sdk-go/aws/session"
+    "github.com/aws/aws-sdk-go/service/sqs"
+    "github.com/aws/aws-sdk-go/aws"
 )
 
 const (
@@ -32,14 +34,35 @@ type BookingStatus struct {
     Message     string `json:"message"`
 }
 
-func HandleRequest(sqsEvent events.SQSEvent) (BookingStatus, error) {
-    if len(sqsEvent.Records) == 0 {
+func HandleRequest() (BookingStatus, error) {
+
+    svc := sqs.New(session.New())
+    qURL := "https://sqs.eu-west-2.amazonaws.com/370899855624/CourtsQueue"
+
+    result, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
+        AttributeNames: []*string{
+            aws.String(sqs.MessageSystemAttributeNameSentTimestamp),
+        },
+        MessageAttributeNames: []*string{
+            aws.String(sqs.QueueAttributeNameAll),
+        },
+        QueueUrl:            &qURL,
+        MaxNumberOfMessages: aws.Int64(1),
+        VisibilityTimeout:   aws.Int64(20),  // 20 seconds
+        WaitTimeSeconds:     aws.Int64(0),
+    })
+
+    if err != nil {
+        return BookingStatus{Message: fmt.Sprintf("Failed to book court.")}, err
+    }
+
+    if len(result.Messages) == 0 {
         return BookingStatus{Message: fmt.Sprintf("Failed to book court.")}, errors.New("No SQS message passed to function")
     }
 
-    msg := sqsEvent.Records[0]
+    msg := result.Messages[0]
     event := Court{}
-    json.Unmarshal([]byte(msg.Body), &event)
+    json.Unmarshal([]byte(*msg.Body), &event)
 
 
 	// create a cookiejar - this is required because the website uses cookies
