@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+    "os"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -37,7 +38,8 @@ type BookingStatus struct {
 func HandleRequest() (BookingStatus, error) {
 
     svc := sqs.New(session.New())
-    qURL := "https://sqs.eu-west-2.amazonaws.com/370899855624/CourtsQueue"
+    //qURL := "https://sqs.eu-west-2.amazonaws.com/370899855624/CourtsQueue"
+    qURL := os.Getenv("BOOKING_QUEUE")
 
     result, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
         AttributeNames: []*string{
@@ -112,8 +114,8 @@ func HandleRequest() (BookingStatus, error) {
 	v := url.Values{}
 	v.Set("utf8", "&#x2713;")
 	v.Set("authenticity_token", token)
-	v.Set("booking[full_name]", "Nick Hale")
-	v.Set("booking[membership_number]", "s119")
+	v.Set("booking[full_name]", os.Getenv("NAME"))
+	v.Set("booking[membership_number]", os.Getenv("MEMBERSHIP_NUMBER"))
 	v.Set("booking[vs_player_name]", "")
 	v.Set("booking[booking_number]", "1")
 	v.Set("booking[start_time]", time)

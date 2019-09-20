@@ -19,6 +19,7 @@ The message needs to be in the following format:
 ```
 
 ## TODO
+* --Use environment variables--
 * logging
 * testing
 * multiple messages
