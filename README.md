@@ -1,16 +1,25 @@
 # Booking App
 
-This a command line application that books a squash court.
+This is an AWS Lambda function that books a squash court.
 
-## Usage
+A message containing the details of the court to be booked is placed on SQS.  
+When this Lambda function is triggered it reads the next message from the SQS queue  
+and books the court according to the variableis in the message.
 
-```bash
-./booker -c 1 -d 20 -h 19 -m 50 -t 17
+The message needs to be in the following format:
+
+```json
+{
+    "Court": "1",
+    "Days": "21",
+    "Hour": "19",
+    "Min": "50",
+    "Timeslot": "17"
+}
 ```
-Flag | Description |
---- | ---
--c|  court to book  
--d|  days in the future to book it  
--h|  hour of court in 24hr format  
--m|  minute of court in 24hr format  
--t|  timeslot of court  
+
+## TODO
+* logging
+* testing
+* multiple messages
+* how to handle bookings beyond 21 days
