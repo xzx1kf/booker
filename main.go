@@ -1,22 +1,22 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-    "encoding/json"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-    "os"
+	"os"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/publicsuffix"
 
-    "github.com/aws/aws-lambda-go/lambda"
-    "github.com/aws/aws-sdk-go/aws/session"
-    "github.com/aws/aws-sdk-go/service/sqs"
-    "github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sqs"
 )
 
 const (
@@ -24,65 +24,60 @@ const (
 )
 
 type Court struct {
-    Court       string `json:"court"`
-    Days        string `json:"days"`
-    Hour        string `json:"hour"`
-    Min         string `json:"min"`
-    Timeslot    string `json:"timeslot"`
+	Court    string `json:"court"`
+	Days     string `json:"days"`
+	Hour     string `json:"hour"`
+	Min      string `json:"min"`
+	Timeslot string `json:"timeslot"`
 }
 
-type BookingStatus struct {
-    Message     string `json:"message"`
-}
+func HandleRequest() error {
 
-func HandleRequest() (BookingStatus, error) {
+	svc := sqs.New(session.New())
+	qURL := os.Getenv("BOOKING_QUEUE")
 
-    svc := sqs.New(session.New())
-    //qURL := "https://sqs.eu-west-2.amazonaws.com/370899855624/CourtsQueue"
-    qURL := os.Getenv("BOOKING_QUEUE")
+	result, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
+		AttributeNames: []*string{
+			aws.String(sqs.MessageSystemAttributeNameSentTimestamp),
+		},
+		MessageAttributeNames: []*string{
+			aws.String(sqs.QueueAttributeNameAll),
+		},
+		QueueUrl:            &qURL,
+		MaxNumberOfMessages: aws.Int64(1),
+		VisibilityTimeout:   aws.Int64(20), // 20 seconds
+		WaitTimeSeconds:     aws.Int64(0),
+	})
 
-    result, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
-        AttributeNames: []*string{
-            aws.String(sqs.MessageSystemAttributeNameSentTimestamp),
-        },
-        MessageAttributeNames: []*string{
-            aws.String(sqs.QueueAttributeNameAll),
-        },
-        QueueUrl:            &qURL,
-        MaxNumberOfMessages: aws.Int64(1),
-        VisibilityTimeout:   aws.Int64(20),  // 20 seconds
-        WaitTimeSeconds:     aws.Int64(0),
-    })
+	if err != nil {
+		return errors.New("failed to recieve messages from queue")
+	}
 
-    if err != nil {
-        return BookingStatus{Message: fmt.Sprintf("Failed to book court.")}, err
-    }
+	if len(result.Messages) == 0 {
+		return errors.New("no messages to process")
+	}
 
-    if len(result.Messages) == 0 {
-        return BookingStatus{Message: fmt.Sprintf("Failed to book court.")}, errors.New("No SQS message passed to function")
-    }
+	msg := result.Messages[0]
+	event := Court{}
+	json.Unmarshal([]byte(*msg.Body), &event)
 
-    msg := result.Messages[0]
-    event := Court{}
-    json.Unmarshal([]byte(*msg.Body), &event)
+	// Delete the message from the queue.
+	_, err = svc.DeleteMessage(&sqs.DeleteMessageInput{
+		QueueUrl:      &qURL,
+		ReceiptHandle: result.Messages[0].ReceiptHandle,
+	})
 
-    // Delete the message from the queue.
-    resultDelete, err := svc.DeleteMessage(&sqs.DeleteMessageInput{
-        QueueUrl:      &qURL,
-        ReceiptHandle: result.Messages[0].ReceiptHandle,
-    })
+	if err != nil {
+		return errors.New("Failed to delete the message from queue")
+	}
 
-    if err != nil {
-        return BookingStatus{Message: fmt.Sprintf("Failed to book court.")}, errors.New("Failed to delete the message from queue")
-    }
-
-    fmt.Println("Message Deleted", resultDelete)
+	fmt.Println("Message Deleted")
 
 	// create a cookiejar - this is required because the website uses cookies
 	// and without it the booking of a court fails
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
-        return BookingStatus{Message: fmt.Sprintf("Failed to book court %s at %s:%s.", event.Court, event.Hour, event.Min)}, err
+		return err
 	}
 
 	client := &http.Client{
@@ -91,20 +86,20 @@ func HandleRequest() (BookingStatus, error) {
 
 	// Get the court booking page - this creates the cookie
 	r, err := http.NewRequest("GET", tynemouthSquashUrl+"/new?"+
-		"court=" + event.Court +
-		"&days=" + event.Days +
-		"&hour=" + event.Hour +
-		"&min=" + event.Min+
-		"&timeSlot=" + event.Timeslot,
+		"court="+event.Court+
+		"&days="+event.Days+
+		"&hour="+event.Hour+
+		"&min="+event.Min+
+		"&timeSlot="+event.Timeslot,
 		nil)
 	if err != nil {
-        return BookingStatus{Message: fmt.Sprintf("Failed to book court %s at %s:%s.", event.Court, event.Hour, event.Min)}, err
+		return err
 	}
 
 	// Make the request
 	rsp, err := client.Do(r)
 	if err != nil {
-        return BookingStatus{Message: fmt.Sprintf("Failed to book court %s at %s:%s.", event.Court, event.Hour, event.Min)}, err
+		return err
 	}
 	defer rsp.Body.Close()
 
@@ -128,28 +123,30 @@ func HandleRequest() (BookingStatus, error) {
 	// Create the POST request.
 	r, err = http.NewRequest("POST", tynemouthSquashUrl, strings.NewReader(v.Encode()))
 	if err != nil {
-        return BookingStatus{Message: fmt.Sprintf("Failed to book court %s at %s:%s.", event.Court, event.Hour, event.Min)}, err
+		return err
 	}
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 
 	// Perform the POST request
 	rsp, err = client.Do(r)
 	if err != nil {
-        return BookingStatus{Message: fmt.Sprintf("Failed to book court %s at %s:%s.", event.Court, event.Hour, event.Min)}, err
+		return err
 	}
 
 	u, err := url.Parse(rsp.Request.URL.String())
 	if err != nil {
-        return BookingStatus{Message: fmt.Sprintf("Failed to book court %s at %s:%s.", event.Court, event.Hour, event.Min)}, err
+		return err
 	}
 
 	// if the response url contains an error parameter then the booking
 	// must of failed.
 	m, _ := url.ParseQuery(u.RawQuery)
 	if m.Get("error") != "" {
-        return BookingStatus{Message: fmt.Sprintf("Failed to book court. The court is already booked.")}, errors.New("Court already booked.")
+		err := fmt.Errorf("Court %s is already booked at %s", event.Court, time)
+		return err
 	}
-    return BookingStatus{Message: fmt.Sprintf("Court booked.")}, nil
+	fmt.Println("Court", event.Court, "booked at", time)
+	return nil
 }
 
 func parseCourtBookingPage(doc *goquery.Document) (token string, time string) {
