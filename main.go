@@ -64,6 +64,17 @@ func HandleRequest() (BookingStatus, error) {
     event := Court{}
     json.Unmarshal([]byte(*msg.Body), &event)
 
+    // Delete the message from the queue.
+    resultDelete, err := svc.DeleteMessage(&sqs.DeleteMessageInput{
+        QueueUrl:      &qURL,
+        ReceiptHandle: result.Messages[0].ReceiptHandle,
+    })
+
+    if err != nil {
+        return BookingStatus{Message: fmt.Sprintf("Failed to book court.")}, errors.New("Failed to delete the message from queue")
+    }
+
+    fmt.Println("Message Deleted", resultDelete)
 
 	// create a cookiejar - this is required because the website uses cookies
 	// and without it the booking of a court fails
