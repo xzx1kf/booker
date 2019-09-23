@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/xzx1kf/booker/timeslots"
 	"golang.org/x/net/publicsuffix"
 
 	"github.com/aws/aws-lambda-go/lambda"
@@ -24,11 +25,10 @@ const (
 )
 
 type Court struct {
-	Court    string `json:"court"`
-	Days     string `json:"days"`
-	Hour     string `json:"hour"`
-	Min      string `json:"min"`
-	Timeslot string `json:"timeslot"`
+	Court string `json:"court"`
+	Days  string `json:"days"`
+	Hour  string `json:"hour"`
+	Min   string `json:"min"`
 }
 
 func HandleRequest() error {
@@ -84,13 +84,17 @@ func HandleRequest() error {
 		Jar: jar,
 	}
 
+	// derive the timeslot
+    timeslots.Init()
+	timeslot := timeslots.Get(event.Court, event.Hour, event.Min)
+
 	// Get the court booking page - this creates the cookie
 	r, err := http.NewRequest("GET", tynemouthSquashUrl+"/new?"+
 		"court="+event.Court+
 		"&days="+event.Days+
 		"&hour="+event.Hour+
 		"&min="+event.Min+
-		"&timeSlot="+event.Timeslot,
+		"&timeSlot="+timeslot,
 		nil)
 	if err != nil {
 		return err
@@ -114,7 +118,7 @@ func HandleRequest() error {
 	v.Set("booking[vs_player_name]", "")
 	v.Set("booking[booking_number]", "1")
 	v.Set("booking[start_time]", time)
-	v.Set("booking[time_slot_id]", event.Timeslot)
+	v.Set("booking[time_slot_id]", timeslot)
 	v.Set("booking[court_time]", "40")
 	v.Set("booking[court_id]", event.Court)
 	v.Set("booking[days]", event.Days)
