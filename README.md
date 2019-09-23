@@ -19,8 +19,11 @@ The message needs to be in the following format:
 ```
 
 ## TODO
-* --Use environment variables--
+* ~~Use environment variables~~
+* create a function to derive the timeslot parameter from the court number and time
+* create a function to derive the days parameter from the date
 * logging
 * testing
 * multiple messages
-* how to handle bookings beyond 21 days
+* how to handle bookings beyond 21 days - possibly link to the function to derive the days parameter
+* front end to add bookings
