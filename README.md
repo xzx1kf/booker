@@ -4,23 +4,22 @@ This is an AWS Lambda function that books a squash court.
 
 A message containing the details of the court to be booked is placed on SQS.  
 When this Lambda function is triggered it reads the next message from the SQS queue  
-and books the court according to the variableis in the message.
+and books the court according to the parameters in the message.
 
-The message needs to be in the following format:
+The message is encoded in json and should to be in the following format:
 
 ```json
 {
     "Court": "1",
     "Days": "21",
     "Hour": "19",
-    "Min": "50",
-    "Timeslot": "17"
+    "Min": "50"
 }
 ```
 
 ## TODO
 * ~~Use environment variables~~
-* create a function to derive the timeslot parameter from the court number and time
+* ~~create a function to derive the timeslot parameter from the court number and time~~
 * create a function to derive the days parameter from the date
 * logging
 * testing
