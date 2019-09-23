@@ -1,0 +1,123 @@
+package timeslots
+
+type slot struct {
+    Court, Hour, Min    string
+}
+
+var timeslots = make(map[slot]string)
+
+func Init() {
+    // Court 1
+    timeslots[slot{"1", "9", "10"}] = "1"
+    timeslots[slot{"1", "9", "50"}] = "2"
+    timeslots[slot{"1", "10", "30"}] = "3"
+    timeslots[slot{"1", "11", "10"}] = "4"
+    timeslots[slot{"1", "11", "50"}] = "5"
+    timeslots[slot{"1", "12", "30"}] = "6"
+    timeslots[slot{"1", "13", "10"}] = "7"
+    timeslots[slot{"1", "13", "50"}] = "8"
+    timeslots[slot{"1", "14", "30"}] = "9"
+    timeslots[slot{"1", "15", "10"}] = "10"
+    timeslots[slot{"1", "15", "50"}] = "11"
+    timeslots[slot{"1", "16", "30"}] = "12"
+    timeslots[slot{"1", "17", "10"}] = "13"
+    timeslots[slot{"1", "17", "50"}] = "14"
+    timeslots[slot{"1", "18", "30"}] = "15"
+    timeslots[slot{"1", "19", "10"}] = "16"
+    timeslots[slot{"1", "19", "50"}] = "17"
+    timeslots[slot{"1", "20", "30"}] = "18"
+    timeslots[slot{"1", "21", "10"}] = "19"
+    timeslots[slot{"1", "21", "50"}] = "20"
+
+    // Court 2
+    timeslots[slot{"2", "9", "10"}] = "21"
+    timeslots[slot{"2", "9", "50"}] = "22"
+    timeslots[slot{"2", "10", "30"}] = "23"
+    timeslots[slot{"2", "11", "10"}] = "24"
+    timeslots[slot{"2", "11", "50"}] = "25"
+    timeslots[slot{"2", "12", "30"}] = "26"
+    timeslots[slot{"2", "13", "10"}] = "27"
+    timeslots[slot{"2", "13", "50"}] = "28"
+    timeslots[slot{"2", "14", "30"}] = "29"
+    timeslots[slot{"2", "15", "10"}] = "30"
+    timeslots[slot{"2", "15", "50"}] = "31"
+    timeslots[slot{"2", "16", "30"}] = "32"
+    timeslots[slot{"2", "17", "10"}] = "33"
+    timeslots[slot{"2", "17", "50"}] = "34"
+    timeslots[slot{"2", "18", "30"}] = "35"
+    timeslots[slot{"2", "19", "10"}] = "36"
+    timeslots[slot{"2", "19", "50"}] = "37"
+    timeslots[slot{"2", "20", "30"}] = "38"
+    timeslots[slot{"2", "21", "10"}] = "39"
+    timeslots[slot{"2", "21", "50"}] = "40"
+
+    // Court 3
+    timeslots[slot{"3", "9", "0"}] = "41"
+    timeslots[slot{"3", "9", "40"}] = "42"
+    timeslots[slot{"3", "10", "20"}] = "43"
+    timeslots[slot{"3", "11", "0"}] = "44"
+    timeslots[slot{"3", "11", "40"}] = "45"
+    timeslots[slot{"3", "12", "20"}] = "46"
+    timeslots[slot{"3", "13", "0"}] = "47"
+    timeslots[slot{"3", "13", "40"}] = "48"
+    timeslots[slot{"3", "14", "20"}] = "49"
+    timeslots[slot{"3", "15", "0"}] = "50"
+    timeslots[slot{"3", "15", "40"}] = "51"
+    timeslots[slot{"3", "16", "20"}] = "52"
+    timeslots[slot{"3", "17", "0"}] = "53"
+    timeslots[slot{"3", "17", "40"}] = "54"
+    timeslots[slot{"3", "18", "20"}] = "55"
+    timeslots[slot{"3", "19", "0"}] = "56"
+    timeslots[slot{"3", "19", "40"}] = "57"
+    timeslots[slot{"3", "20", "20"}] = "58"
+    timeslots[slot{"3", "21", "0"}] = "59"
+    timeslots[slot{"3", "21", "40"}] = "60"
+
+    // Court 4
+    timeslots[slot{"4", "9", "0"}] = "61"
+    timeslots[slot{"4", "9", "40"}] = "62"
+    timeslots[slot{"4", "10", "20"}] = "63"
+    timeslots[slot{"4", "11", "0"}] = "64"
+    timeslots[slot{"4", "11", "40"}] = "65"
+    timeslots[slot{"4", "12", "20"}] = "66"
+    timeslots[slot{"4", "13", "0"}] = "67"
+    timeslots[slot{"4", "13", "40"}] = "68"
+    timeslots[slot{"4", "14", "20"}] = "69"
+    timeslots[slot{"4", "15", "0"}] = "70"
+    timeslots[slot{"4", "15", "40"}] = "71"
+    timeslots[slot{"4", "16", "20"}] = "72"
+    timeslots[slot{"4", "17", "0"}] = "73"
+    timeslots[slot{"4", "17", "40"}] = "74"
+    timeslots[slot{"4", "18", "20"}] = "75"
+    timeslots[slot{"4", "19", "0"}] = "76"
+    timeslots[slot{"4", "19", "40"}] = "77"
+    timeslots[slot{"4", "20", "20"}] = "78"
+    timeslots[slot{"4", "21", "0"}] = "79"
+    timeslots[slot{"4", "21", "40"}] = "80"
+
+    // Court 5
+    timeslots[slot{"5", "9", "5"}] = "61"
+    timeslots[slot{"5", "9", "45"}] = "62"
+    timeslots[slot{"5", "10", "25"}] = "63"
+    timeslots[slot{"5", "11", "5"}] = "64"
+    timeslots[slot{"5", "11", "45"}] = "65"
+    timeslots[slot{"5", "12", "25"}] = "66"
+    timeslots[slot{"5", "13", "5"}] = "67"
+    timeslots[slot{"5", "13", "45"}] = "68"
+    timeslots[slot{"5", "14", "25"}] = "69"
+    timeslots[slot{"5", "15", "5"}] = "70"
+    timeslots[slot{"5", "15", "45"}] = "71"
+    timeslots[slot{"5", "16", "25"}] = "72"
+    timeslots[slot{"5", "17", "5"}] = "73"
+    timeslots[slot{"5", "17", "45"}] = "74"
+    timeslots[slot{"5", "18", "25"}] = "75"
+    timeslots[slot{"5", "19", "5"}] = "76"
+    timeslots[slot{"5", "19", "45"}] = "77"
+    timeslots[slot{"5", "20", "25"}] = "78"
+    timeslots[slot{"5", "21", "5"}] = "79"
+    timeslots[slot{"5", "21", "45"}] = "80"
+}
+
+func Get(court, hour, min string) string {
+    return timeslots[slot{court, hour, min}]
+}
