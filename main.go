@@ -11,13 +11,12 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/xzx1kf/booker/timeslots"
-	"golang.org/x/net/publicsuffix"
-
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/xzx1kf/booker/timeslots"
+	"golang.org/x/net/publicsuffix"
 )
 
 const (
@@ -85,7 +84,7 @@ func HandleRequest() error {
 	}
 
 	// derive the timeslot
-    timeslots.Init()
+	timeslots.Init()
 	timeslot := timeslots.Get(event.Court, event.Hour, event.Min)
 
 	// Get the court booking page - this creates the cookie
