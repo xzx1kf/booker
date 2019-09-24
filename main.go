@@ -30,7 +30,7 @@ type Court struct {
 	Min   string `json:"min"`
 }
 
-func HandleRequest() error {
+func BookCourts() error {
 	// read the booking info from SQS i.e. Court, Days, Hour, Min
 	booking, err := getBookingInfo()
 
@@ -183,5 +183,5 @@ func parseCourtBookingPage(doc *goquery.Document) (token string, time string) {
 }
 
 func main() {
-	lambda.Start(HandleRequest)
+	lambda.Start(BookCourts)
 }
