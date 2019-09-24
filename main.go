@@ -31,9 +31,104 @@ type Court struct {
 }
 
 func HandleRequest() error {
+	// read the booking info from SQS i.e. Court, Days, Hour, Min
+	booking, err := getBookingInfo()
 
+	// lookup the timeslot value given the Court, Hour and Min to be booked
+	timeslots.Init() // create the lookup map
+	timeslot := timeslots.Get(booking.Court, booking.Hour, booking.Min)
+
+	// create a cookiejar
+	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
+	if err != nil {
+		return err
+	}
+
+	client := &http.Client{
+		Jar: jar,
+	}
+
+	doc, err := getBookingPage(client, booking, timeslot)
+	if err != nil {
+		return err
+	}
+
+	token, time := parseCourtBookingPage(doc)
+
+	v := url.Values{}
+	v.Set("utf8", "&#x2713;")
+	v.Set("authenticity_token", token)
+	v.Set("booking[full_name]", os.Getenv("NAME"))
+	v.Set("booking[membership_number]", os.Getenv("MEMBERSHIP_NUMBER"))
+	v.Set("booking[vs_player_name]", "")
+	v.Set("booking[booking_number]", "1")
+	v.Set("booking[start_time]", time)
+	v.Set("booking[time_slot_id]", timeslot)
+	v.Set("booking[court_time]", "40")
+	v.Set("booking[court_id]", booking.Court)
+	v.Set("booking[days]", booking.Days)
+	v.Set("commit", "Book Court")
+
+	// Create the POST request.
+	request, err := http.NewRequest("POST", tynemouthSquashUrl, strings.NewReader(v.Encode()))
+	if err != nil {
+		return err
+	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+
+	// Perform the POST request
+	response, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+
+	u, err := url.Parse(response.Request.URL.String())
+	if err != nil {
+		return err
+	}
+
+	// if the response url contains an error parameter then the booking
+	// must of failed.
+	m, _ := url.ParseQuery(u.RawQuery)
+	if m.Get("error") != "" {
+		err := fmt.Errorf("Court %s is already booked at %s", booking.Court, time)
+		return err
+	}
+	fmt.Println("Court", booking.Court, "booked at", time)
+	return nil
+}
+
+func getBookingPage(client *http.Client, booking Court, timeslot string) (doc *goquery.Document, err error) {
+	request, err := http.NewRequest("GET",
+		tynemouthSquashUrl+"/new?"+
+			"court="+booking.Court+
+			"&days="+booking.Days+
+			"&hour="+booking.Hour+
+			"&min="+booking.Min+
+			"&timeSlot="+timeslot,
+		nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Make the request
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	doc, err = goquery.NewDocumentFromReader(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
+func getBookingInfo() (Court, error) {
 	svc := sqs.New(session.New())
 	qURL := os.Getenv("BOOKING_QUEUE")
+	event := Court{}
 
 	result, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
 		AttributeNames: []*string{
@@ -47,109 +142,30 @@ func HandleRequest() error {
 		VisibilityTimeout:   aws.Int64(20), // 20 seconds
 		WaitTimeSeconds:     aws.Int64(0),
 	})
-
 	if err != nil {
-		return errors.New("failed to recieve messages from queue")
+		return event, errors.New("failed to recieve messages from queue")
 	}
 
 	if len(result.Messages) == 0 {
-		return errors.New("no messages to process")
+		return event, errors.New("no messages to process")
 	}
 
 	msg := result.Messages[0]
-	event := Court{}
+
 	json.Unmarshal([]byte(*msg.Body), &event)
 
-	// Delete the message from the queue.
+	// Delete message from SQS
 	_, err = svc.DeleteMessage(&sqs.DeleteMessageInput{
 		QueueUrl:      &qURL,
 		ReceiptHandle: result.Messages[0].ReceiptHandle,
 	})
-
 	if err != nil {
-		return errors.New("Failed to delete the message from queue")
+		return event, errors.New("Failed to delete the message from queue")
 	}
 
 	fmt.Println("Message Deleted")
 
-	// create a cookiejar - this is required because the website uses cookies
-	// and without it the booking of a court fails
-	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
-	if err != nil {
-		return err
-	}
-
-	client := &http.Client{
-		Jar: jar,
-	}
-
-	// derive the timeslot
-	timeslots.Init()
-	timeslot := timeslots.Get(event.Court, event.Hour, event.Min)
-
-	// Get the court booking page - this creates the cookie
-	r, err := http.NewRequest("GET", tynemouthSquashUrl+"/new?"+
-		"court="+event.Court+
-		"&days="+event.Days+
-		"&hour="+event.Hour+
-		"&min="+event.Min+
-		"&timeSlot="+timeslot,
-		nil)
-	if err != nil {
-		return err
-	}
-
-	// Make the request
-	rsp, err := client.Do(r)
-	if err != nil {
-		return err
-	}
-	defer rsp.Body.Close()
-
-	doc, err := goquery.NewDocumentFromReader(rsp.Body)
-	token, time := parseCourtBookingPage(doc)
-
-	v := url.Values{}
-	v.Set("utf8", "&#x2713;")
-	v.Set("authenticity_token", token)
-	v.Set("booking[full_name]", os.Getenv("NAME"))
-	v.Set("booking[membership_number]", os.Getenv("MEMBERSHIP_NUMBER"))
-	v.Set("booking[vs_player_name]", "")
-	v.Set("booking[booking_number]", "1")
-	v.Set("booking[start_time]", time)
-	v.Set("booking[time_slot_id]", timeslot)
-	v.Set("booking[court_time]", "40")
-	v.Set("booking[court_id]", event.Court)
-	v.Set("booking[days]", event.Days)
-	v.Set("commit", "Book Court")
-
-	// Create the POST request.
-	r, err = http.NewRequest("POST", tynemouthSquashUrl, strings.NewReader(v.Encode()))
-	if err != nil {
-		return err
-	}
-	r.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
-
-	// Perform the POST request
-	rsp, err = client.Do(r)
-	if err != nil {
-		return err
-	}
-
-	u, err := url.Parse(rsp.Request.URL.String())
-	if err != nil {
-		return err
-	}
-
-	// if the response url contains an error parameter then the booking
-	// must of failed.
-	m, _ := url.ParseQuery(u.RawQuery)
-	if m.Get("error") != "" {
-		err := fmt.Errorf("Court %s is already booked at %s", event.Court, time)
-		return err
-	}
-	fmt.Println("Court", event.Court, "booked at", time)
-	return nil
+	return event, nil
 }
 
 func parseCourtBookingPage(doc *goquery.Document) (token string, time string) {
