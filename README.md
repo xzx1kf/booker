@@ -17,6 +17,11 @@ The message is encoded in json and should to be in the following format:
 }
 ```
 
+The Lambda function also requires 3 Environment Variables:
+* BOOKING_QUEUE - Which SQS to read messages from
+* MEMBERSHIP_NUMBER - What membership number should be used to book a court
+* NAME - The full name of the person who is booking the court
+
 ## TODO
 * ~~Use environment variables~~
 * ~~create a function to derive the timeslot parameter from the court number and time~~
