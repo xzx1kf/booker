@@ -40,48 +40,53 @@ func BookCourts() error {
 
 	// create a cookiejar
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
-	if err != nil {
-		return err
-	}
 
-	client := &http.Client{
-		Jar: jar,
-	}
+	client := &http.Client{Jar: jar}
 
 	doc, err := getBookingPage(client, booking, timeslot)
 	if err != nil {
 		return err
 	}
 
+    // scrape the time and authenticity token from the booking page
 	token, time := parseCourtBookingPage(doc)
 
-	v := url.Values{}
-	v.Set("utf8", "&#x2713;")
-	v.Set("authenticity_token", token)
-	v.Set("booking[full_name]", os.Getenv("NAME"))
-	v.Set("booking[membership_number]", os.Getenv("MEMBERSHIP_NUMBER"))
-	v.Set("booking[vs_player_name]", "")
-	v.Set("booking[booking_number]", "1")
-	v.Set("booking[start_time]", time)
-	v.Set("booking[time_slot_id]", timeslot)
-	v.Set("booking[court_time]", "40")
-	v.Set("booking[court_id]", booking.Court)
-	v.Set("booking[days]", booking.Days)
-	v.Set("commit", "Book Court")
+    // make the request to the app to book the court
+    err = postRequest(client, &booking, token, time, timeslot)
+    if err != nil {
+        return err
+    }
+
+	fmt.Println("Court", booking.Court, "booked at", time)
+	return nil
+}
+
+func postRequest(client *http.Client, booking *Court, token, time, timeslot string) error {
+	data := url.Values{}
+	data.Set("utf8", "&#x2713;")
+	data.Set("authenticity_token", token)
+	data.Set("booking[full_name]", os.Getenv("NAME"))
+	data.Set("booking[membership_number]", os.Getenv("MEMBERSHIP_NUMBER"))
+	data.Set("booking[vs_player_name]", "")
+	data.Set("booking[booking_number]", "1")
+	data.Set("booking[start_time]", time)
+	data.Set("booking[time_slot_id]", timeslot)
+	data.Set("booking[court_time]", "40")
+	data.Set("booking[court_id]", booking.Court)
+	data.Set("booking[days]", booking.Days)
+	data.Set("commit", "Book Court")
 
 	// Create the POST request.
-	request, err := http.NewRequest("POST", tynemouthSquashUrl, strings.NewReader(v.Encode()))
-	if err != nil {
-		return err
-	}
+	request, _ := http.NewRequest("POST", tynemouthSquashUrl, strings.NewReader(data.Encode()))
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 
-	// Perform the POST request
 	response, err := client.Do(request)
 	if err != nil {
 		return err
 	}
 
+    // Inspect the url in the response to see if it contains an error parameter.
+    // This can be used to determine if the court booking was successful.
 	u, err := url.Parse(response.Request.URL.String())
 	if err != nil {
 		return err
@@ -94,8 +99,7 @@ func BookCourts() error {
 		err := fmt.Errorf("Court %s is already booked at %s", booking.Court, time)
 		return err
 	}
-	fmt.Println("Court", booking.Court, "booked at", time)
-	return nil
+    return nil
 }
 
 func getBookingPage(client *http.Client, booking Court, timeslot string) (doc *goquery.Document, err error) {
