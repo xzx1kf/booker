@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/xzx1kf/booker/timeslots"
+	"github.com/xzx1kf/booker/util"
 	"golang.org/x/net/publicsuffix"
 )
 
@@ -35,8 +35,8 @@ func BookCourts() error {
 	booking, err := getBookingInfo()
 
 	// lookup the timeslot value given the Court, Hour and Min to be booked
-	timeslots.Init() // create the lookup map
-	timeslot := timeslots.Get(booking.Court, booking.Hour, booking.Min)
+	util.Init() // create the lookup map
+	timeslot := util.Get(booking.Court, booking.Hour, booking.Min)
 
 	// create a cookiejar
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
