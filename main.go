@@ -35,8 +35,8 @@ func BookCourts() error {
 	booking, err := getBookingInfo()
 
 	// lookup the timeslot value given the Court, Hour and Min to be booked
-	util.Init() // create the lookup map
-	timeslot := util.Get(booking.Court, booking.Hour, booking.Min)
+    tsm := util.NewTimeslotMap()
+	timeslot := tsm.Get(booking.Court, booking.Hour, booking.Min)
 
 	// create a cookiejar
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
