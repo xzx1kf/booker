@@ -2,8 +2,8 @@
 
 This is an AWS Lambda function that books a squash court.
 
-A message containing the details of the court to be booked is placed on SQS.  
-When this Lambda function is triggered it reads the next message from the SQS queue  
+A message containing the details of the court to be booked is placed on SQS.
+When this Lambda function is triggered it reads the next message from the SQS queue
 and books the court according to the parameters in the message.
 
 The message is encoded in json and should to be in the following format:
