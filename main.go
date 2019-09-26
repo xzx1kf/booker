@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -24,28 +25,35 @@ const (
 )
 
 type Court struct {
-	Court string `json:"court"`
-	Days  string `json:"days"`
-	Hour  string `json:"hour"`
-	Min   string `json:"min"`
+	Id   string `json:"id"`
+	Date string `json:"date"`
 }
 
 func BookCourts() (err error) {
 	// Read the booking info from SQS.
-	booking, err := getBookingInfo()
+	court, err := getBookingInfo()
 	if err != nil {
 		return err
 	}
 
+	// Parse the date string into date, time
+	layout := "02/01/2006 15:04"
+	date, _ := time.Parse(layout, court.Date)
+	hour := date.Format("15")
+	min := date.Format("04")
+
+	// need to check whether i'm repeating the time.Parse in the util function
+	days := util.Days(date)
+
 	// Lookup the timeslot value.
 	timeslots := util.NewTimeslotMap()
-	timeslot := timeslots.Lookup(booking.Court, booking.Hour, booking.Min)
+	timeslot := timeslots.Lookup(court.Id, hour, min)
 	if timeslot == "" {
 		err := fmt.Errorf(
 			"Invalid timeslot values. Court: %s, Time: %s:%s.",
-			booking.Court,
-			booking.Hour,
-			booking.Min)
+			court.Id,
+			hour,
+			min)
 		return err
 	}
 
@@ -57,7 +65,7 @@ func BookCourts() (err error) {
 	client := &http.Client{Jar: jar}
 
 	// Make the http 'GET' request to get the court booking page.
-	doc, err := getBookingPage(client, booking, timeslot)
+	doc, err := getBookingPage(client, court.Id, days, hour, min, timeslot)
 	if err != nil {
 		return err
 	}
@@ -66,16 +74,16 @@ func BookCourts() (err error) {
 	token, time := parseCourtBookingPage(doc)
 
 	// Make the http 'POST' request to book the court.
-	err = postRequest(client, &booking, token, time, timeslot)
+	err = postRequest(client, court.Id, days, token, time, timeslot)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Court:", booking.Court, "booked at:", time)
+	fmt.Println("Court:", court.Id, "booked at:", court.Date)
 	return
 }
 
-func postRequest(client *http.Client, booking *Court, token, time, timeslot string) error {
+func postRequest(client *http.Client, id, days, token, time, timeslot string) error {
 	data := url.Values{}
 	data.Set("utf8", "&#x2713;")
 	data.Set("authenticity_token", token)
@@ -86,8 +94,8 @@ func postRequest(client *http.Client, booking *Court, token, time, timeslot stri
 	data.Set("booking[start_time]", time)
 	data.Set("booking[time_slot_id]", timeslot)
 	data.Set("booking[court_time]", "40")
-	data.Set("booking[court_id]", booking.Court)
-	data.Set("booking[days]", booking.Days)
+	data.Set("booking[court_id]", id)
+	data.Set("booking[days]", days)
 	data.Set("commit", "Book Court")
 
 	// Create the POST request.
@@ -110,19 +118,19 @@ func postRequest(client *http.Client, booking *Court, token, time, timeslot stri
 	// must of failed.
 	m, _ := url.ParseQuery(u.RawQuery)
 	if m.Get("error") != "" {
-		err := fmt.Errorf("Court %s is already booked at %s", booking.Court, time)
+		err := fmt.Errorf("Court %s is already booked at %s", id, time)
 		return err
 	}
 	return nil
 }
 
-func getBookingPage(client *http.Client, booking Court, timeslot string) (doc *goquery.Document, err error) {
+func getBookingPage(client *http.Client, id, days, hour, min, timeslot string) (doc *goquery.Document, err error) {
 	request, err := http.NewRequest("GET",
 		tynemouthSquashUrl+"/new?"+
-			"court="+booking.Court+
-			"&days="+booking.Days+
-			"&hour="+booking.Hour+
-			"&min="+booking.Min+
+			"court="+id+
+			"&days="+days+
+			"&hour="+hour+
+			"&min="+min+
 			"&timeSlot="+timeslot,
 		nil)
 	if err != nil {
