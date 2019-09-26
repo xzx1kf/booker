@@ -14,7 +14,7 @@ func NewTimeslotMap() *TimeslotMap {
 	return tsm
 }
 
-func (t *TimeslotMap) Get(court, hour, min string) string {
+func (t *TimeslotMap) Lookup(court, hour, min string) string {
 	return t.ts[slot{court, hour, min}]
 }
 

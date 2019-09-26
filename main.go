@@ -30,35 +30,49 @@ type Court struct {
 	Min   string `json:"min"`
 }
 
-func BookCourts() error {
-	// read the booking info from SQS i.e. Court, Days, Hour, Min
+func BookCourts() (err error) {
+	// Read the booking info from SQS.
 	booking, err := getBookingInfo()
+	if err != nil {
+		return err
+	}
 
-	// lookup the timeslot value given the Court, Hour and Min to be booked
-    tsm := util.NewTimeslotMap()
-	timeslot := tsm.Get(booking.Court, booking.Hour, booking.Min)
+	// Lookup the timeslot value.
+	timeslots := util.NewTimeslotMap()
+	timeslot := timeslots.Lookup(booking.Court, booking.Hour, booking.Min)
+	if timeslot == "" {
+		err := fmt.Errorf(
+			"Invalid timeslot values. Court: %s, Time: %s:%s.",
+			booking.Court,
+			booking.Hour,
+			booking.Min)
+		return err
+	}
 
-	// create a cookiejar
+	// Initialize a http.Client and add a cookiejar.
+	// For some reason the POST method will fail if this cookie jar
+	// is not present.
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 
 	client := &http.Client{Jar: jar}
 
+	// Make the http 'GET' request to get the court booking page.
 	doc, err := getBookingPage(client, booking, timeslot)
 	if err != nil {
 		return err
 	}
 
-    // scrape the time and authenticity token from the booking page
+	// Scrape the time and authenticity token from the booking page.
 	token, time := parseCourtBookingPage(doc)
 
-    // make the request to the app to book the court
-    err = postRequest(client, &booking, token, time, timeslot)
-    if err != nil {
-        return err
-    }
+	// Make the http 'POST' request to book the court.
+	err = postRequest(client, &booking, token, time, timeslot)
+	if err != nil {
+		return err
+	}
 
-	fmt.Println("Court", booking.Court, "booked at", time)
-	return nil
+	fmt.Println("Court:", booking.Court, "booked at:", time)
+	return
 }
 
 func postRequest(client *http.Client, booking *Court, token, time, timeslot string) error {
@@ -85,8 +99,8 @@ func postRequest(client *http.Client, booking *Court, token, time, timeslot stri
 		return err
 	}
 
-    // Inspect the url in the response to see if it contains an error parameter.
-    // This can be used to determine if the court booking was successful.
+	// Inspect the url in the response to see if it contains an error parameter.
+	// This can be used to determine if the court booking was successful.
 	u, err := url.Parse(response.Request.URL.String())
 	if err != nil {
 		return err
@@ -99,7 +113,7 @@ func postRequest(client *http.Client, booking *Court, token, time, timeslot stri
 		err := fmt.Errorf("Court %s is already booked at %s", booking.Court, time)
 		return err
 	}
-    return nil
+	return nil
 }
 
 func getBookingPage(client *http.Client, booking Court, timeslot string) (doc *goquery.Document, err error) {
@@ -129,10 +143,9 @@ func getBookingPage(client *http.Client, booking Court, timeslot string) (doc *g
 	return doc, nil
 }
 
-func getBookingInfo() (Court, error) {
+func getBookingInfo() (event Court, err error) {
 	svc := sqs.New(session.New())
 	qURL := os.Getenv("BOOKING_QUEUE")
-	event := Court{}
 
 	result, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
 		AttributeNames: []*string{
