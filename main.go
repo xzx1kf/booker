@@ -48,16 +48,7 @@ func BookCourts() (err error) {
 	days := util.Days(date)
 
 	// Lookup the timeslot value.
-	timeslots := util.NewTimeslotMap()
-	timeslot := timeslots.Lookup(court.Id, hour, min)
-	if timeslot == "" {
-		err := fmt.Errorf(
-			"Invalid timeslot values. Court: %s, Time: %s:%s.",
-			court.Id,
-			hour,
-			min)
-		return err
-	}
+	timeslot := util.Timeslot(court.Id, court.Date)
 
 	// Initialize a http.Client and add a cookiejar.
 	// For some reason the POST method will fail if this cookie jar
