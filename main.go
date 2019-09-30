@@ -42,7 +42,9 @@ func BookCourts() (err error) {
 	hour := date.Format("15")
 	min := date.Format("04")
 
-	// need to check whether i'm repeating the time.Parse in the util function
+	// TODO: use the days value to determine whether the court can be booked
+	// today. If days >= 22 don't book and don't delete from the queue.
+	// Deletion of the message from the queue is done in getBookingInfo()
 	days := util.Days(date)
 
 	// Lookup the timeslot value.

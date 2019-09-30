@@ -20,8 +20,8 @@ func (t *TimeslotMap) Lookup(court, hour, min string) string {
 
 func (t *TimeslotMap) Init() {
 	// Court 1
-	t.ts[slot{"1", "9", "10"}] = "1"
-	t.ts[slot{"1", "9", "50"}] = "2"
+	t.ts[slot{"1", "09", "10"}] = "1"
+	t.ts[slot{"1", "09", "50"}] = "2"
 	t.ts[slot{"1", "10", "30"}] = "3"
 	t.ts[slot{"1", "11", "10"}] = "4"
 	t.ts[slot{"1", "11", "50"}] = "5"
@@ -42,8 +42,8 @@ func (t *TimeslotMap) Init() {
 	t.ts[slot{"1", "21", "50"}] = "20"
 
 	// Court 2
-	t.ts[slot{"2", "9", "10"}] = "21"
-	t.ts[slot{"2", "9", "50"}] = "22"
+	t.ts[slot{"2", "09", "10"}] = "21"
+	t.ts[slot{"2", "09", "50"}] = "22"
 	t.ts[slot{"2", "10", "30"}] = "23"
 	t.ts[slot{"2", "11", "10"}] = "24"
 	t.ts[slot{"2", "11", "50"}] = "25"
@@ -64,8 +64,8 @@ func (t *TimeslotMap) Init() {
 	t.ts[slot{"2", "21", "50"}] = "40"
 
 	// Court 3
-	t.ts[slot{"3", "9", "0"}] = "41"
-	t.ts[slot{"3", "9", "40"}] = "42"
+	t.ts[slot{"3", "09", "0"}] = "41"
+	t.ts[slot{"3", "09", "40"}] = "42"
 	t.ts[slot{"3", "10", "20"}] = "43"
 	t.ts[slot{"3", "11", "0"}] = "44"
 	t.ts[slot{"3", "11", "40"}] = "45"
@@ -86,8 +86,8 @@ func (t *TimeslotMap) Init() {
 	t.ts[slot{"3", "21", "40"}] = "60"
 
 	// Court 4
-	t.ts[slot{"4", "9", "0"}] = "61"
-	t.ts[slot{"4", "9", "40"}] = "62"
+	t.ts[slot{"4", "09", "0"}] = "61"
+	t.ts[slot{"4", "09", "40"}] = "62"
 	t.ts[slot{"4", "10", "20"}] = "63"
 	t.ts[slot{"4", "11", "0"}] = "64"
 	t.ts[slot{"4", "11", "40"}] = "65"
@@ -108,8 +108,8 @@ func (t *TimeslotMap) Init() {
 	t.ts[slot{"4", "21", "40"}] = "80"
 
 	// Court 5
-	t.ts[slot{"5", "9", "5"}] = "81"
-	t.ts[slot{"5", "9", "45"}] = "82"
+	t.ts[slot{"5", "09", "5"}] = "81"
+	t.ts[slot{"5", "09", "45"}] = "82"
 	t.ts[slot{"5", "10", "25"}] = "83"
 	t.ts[slot{"5", "11", "5"}] = "84"
 	t.ts[slot{"5", "11", "45"}] = "85"
