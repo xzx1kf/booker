@@ -10,10 +10,8 @@ The message is encoded in json and should to be in the following format:
 
 ```json
 {
-    "Court": "1",
-    "Days": "21",
-    "Hour": "19",
-    "Min": "50"
+    "Id": "1",
+    "Date": "19/10/2019 19:50",
 }
 ```
 
@@ -25,7 +23,7 @@ The Lambda function also requires 3 Environment Variables:
 ## TODO
 * ~~Use environment variables~~
 * ~~create a function to derive the timeslot parameter from the court number and time~~
-* create a function to derive the days parameter from the date
+* ~~create a function to derive the days parameter from the date~~
 * logging
 * testing
 * multiple messages
