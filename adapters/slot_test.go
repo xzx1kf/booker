@@ -13,7 +13,7 @@ func TestListSlot(t *testing.T) {
 
 	fmt.Println(client.BaseURL)
 
-	slot := Slot{Court: "1", Days: "21", Hour: "19", Min: "50", TimeSlot: "17"}
+	slot := &Slot{Court: "1", Days: "20", Hour: "19", Min: "50", TimeSlot: "17"}
 
 	err := client.Slot.ListSlot(slot)
 	if err != nil {

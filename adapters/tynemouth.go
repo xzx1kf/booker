@@ -102,15 +102,12 @@ func (c *Client) Do(req *http.Request, v interface{}) (*http.Response, error) {
 	}
 	defer resp.Body.Close()
 
-	fmt.Println(v)
-
 	if v != nil {
-		fmt.Println(v.(io.Writer))
+		// TODO Change the interface so that slot, for example, implements a parsing
+		// interface which parses the html and returns the required values.
 		if w, ok := v.(io.Writer); ok {
-			fmt.Println("DO")
 			io.Copy(w, resp.Body)
 		} else {
-			fmt.Println("DO Encode JSON")
 			decErr := json.NewDecoder(resp.Body).Decode(v)
 			if decErr == io.EOF {
 				decErr = nil // ignore EOF errors caused by empty response body
