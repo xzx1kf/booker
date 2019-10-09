@@ -1,7 +1,9 @@
 package tynemouth
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -21,6 +23,10 @@ type Client struct {
 	client    *http.Client
 	BaseURL   *url.URL
 	UserAgent string
+
+	common service
+
+	Slot *SlotService
 }
 
 type service struct {
@@ -59,6 +65,8 @@ func NewClient(httpClient *http.Client) *Client {
 	baseURL, _ := url.Parse(defaultBaseURL)
 
 	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
+	c.common.client = c
+	c.Slot = (*SlotService)(&c.common)
 	return c
 }
 
@@ -85,4 +93,33 @@ func (c *Client) NewRequest(method, urlStr string) (*http.Request, error) {
 	}
 
 	return req, nil
+}
+
+func (c *Client) Do(req *http.Request, v interface{}) (*http.Response, error) {
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	fmt.Println(v)
+
+	if v != nil {
+		fmt.Println(v.(io.Writer))
+		if w, ok := v.(io.Writer); ok {
+			fmt.Println("DO")
+			io.Copy(w, resp.Body)
+		} else {
+			fmt.Println("DO Encode JSON")
+			decErr := json.NewDecoder(resp.Body).Decode(v)
+			if decErr == io.EOF {
+				decErr = nil // ignore EOF errors caused by empty response body
+			}
+			if decErr != nil {
+				err = decErr
+			}
+		}
+	}
+
+	return resp, err
 }

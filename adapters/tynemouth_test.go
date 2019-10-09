@@ -6,11 +6,6 @@ import (
 	"testing"
 )
 
-type Slot struct {
-	Court string `json:"court"`
-	Date  string `json:"date"`
-}
-
 type BookingInfo struct {
 	Court    string `url:"court"`
 	Days     string `url:"days"`
