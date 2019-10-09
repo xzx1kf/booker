@@ -95,6 +95,7 @@ func (c *Client) NewRequest(method, urlStr string) (*http.Request, error) {
 	return req, nil
 }
 
+// Do sends a http request and returns the http response.
 func (c *Client) Do(req *http.Request, v interface{}) (*http.Response, error) {
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -105,8 +106,9 @@ func (c *Client) Do(req *http.Request, v interface{}) (*http.Response, error) {
 	if v != nil {
 		// TODO Change the interface so that slot, for example, implements a parsing
 		// interface which parses the html and returns the required values.
-		if w, ok := v.(io.Writer); ok {
-			io.Copy(w, resp.Body)
+		if p, ok := v.(Parser); ok {
+			//io.Copy(w, resp.Body)
+			p.Parse(resp)
 		} else {
 			decErr := json.NewDecoder(resp.Body).Decode(v)
 			if decErr == io.EOF {

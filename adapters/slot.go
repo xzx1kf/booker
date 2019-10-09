@@ -2,9 +2,14 @@ package tynemouth
 
 import (
 	"fmt"
+	"net/http"
 )
 
 type SlotService service
+
+type Parser interface {
+	Parse(resp *http.Response)
+}
 
 type Slot struct {
 	Court     string `url:"court"`
@@ -16,11 +21,9 @@ type Slot struct {
 	Time      string `url:"time,omitempty"`
 }
 
-func (s *Slot) Write(p []byte) (n int, err error) {
-	fmt.Println(string(p))
-	s.AuthToken = "authtoken"
-	s.Time = "time"
-	return 10, nil
+func (s *Slot) Parse(resp *http.Response) {
+	s.AuthToken = "token"
+	s.Time = "19:50"
 }
 
 func (s *SlotService) ListSlot(opt *Slot) error {
@@ -36,13 +39,11 @@ func (s *SlotService) ListSlot(opt *Slot) error {
 	}
 
 	// slot needs authtoken and time populating in the write method
-	resp, err := s.client.Do(req, opt)
+	_, err = s.client.Do(req, opt)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(resp)
-	fmt.Println(opt)
 	return nil
 
 }
