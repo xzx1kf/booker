@@ -1,0 +1,9 @@
+Request     Description             Use Case
+-----------------------------------------------------------------------------
+GET         /courts/{day}          Show a list of slots on that day to the users
+GET         /courts/{day}/{id}     Show details of a specific slot
+POST        /courts/{day}          Book a slot
+DELETE      /courts/{day}/{id}     Cancel a specific slot
+
+The {day} placeholder represents the number of days from today
+The {id} placeholder represents where in the path the unique id for a slot will go
